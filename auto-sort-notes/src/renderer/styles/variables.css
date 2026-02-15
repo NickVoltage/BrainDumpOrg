@@ -1,0 +1,147 @@
+/**
+ * CSS Variables for Theming
+ * 
+ * Purpose: Define CSS variables for theme system.
+ * These variables can be overridden to customize the application appearance.
+ * 
+ * Last Updated: 2024
+ * Status: Foundation - Ready for customization
+ */
+
+/* Comment 1010: Theme CSS Variables
+ * This file defines CSS variables for the theme system.
+ * Variables are organized by category (colors, spacing, typography, etc.)
+ * and can be overridden for light/dark themes or custom themes.
+ *
+ * Intended Interactions:
+ * - Used by: ThemeContext (Comment 1007) for theme switching
+ * - Used by: All components for theme-aware styling
+ * - Provides: Centralized theme values via CSS variables
+ *
+ * Logic Flow:
+ * 1. Define default (light) theme variables
+ * 2. Define dark theme variables in [data-theme="dark"]
+ * 3. Components use var(--variable-name) for theme-aware styling
+ * 4. ThemeContext updates data-theme attribute to switch themes
+ *
+ * Dependencies:
+ * - ThemeContext (Comment 1007) for theme switching
+ * - Tailwind CSS for utility classes
+ *
+ * Related Files:
+ * - src/renderer/contexts/ThemeContext.tsx
+ * - src/renderer/config/themes.ts
+ * - All component files using theme variables
+ *
+ * Related Comments:
+ * - Comment 1007 (ThemeContext.tsx - theme management)
+ * - Comment 1008 (themes.ts - theme configuration)
+ * - Comment 1009 (ThemeToggle.tsx - theme toggle component)
+ */
+
+:root {
+  /* Color Palette - Light Theme */
+  --color-background: #ffffff;
+  --color-foreground: #0f0f0f;
+  --color-primary: #396cd8;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f6f6f6;
+  --color-secondary-foreground: #0f0f0f;
+  --color-accent: #646cff;
+  --color-accent-foreground: #ffffff;
+  --color-muted: #f6f6f6;
+  --color-muted-foreground: #6b7280;
+  --color-border: #e5e7eb;
+  --color-input: #ffffff;
+  --color-input-foreground: #0f0f0f;
+  --color-ring: #396cd8;
+  
+  /* Tooltip Colors */
+  --color-tooltip-background: var(--color-background);
+  --color-tooltip-foreground: var(--color-foreground);
+  
+  /* Status Colors */
+  --color-success: #10b981;
+  --color-success-foreground: #ffffff;
+  --color-warning: #f59e0b;
+  --color-warning-foreground: #ffffff;
+  --color-error: #ef4444;
+  --color-error-foreground: #ffffff;
+  --color-info: #3b82f6;
+  --color-info-foreground: #ffffff;
+  
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  
+  /* Typography */
+  --font-family-sans: Inter, Avenir, Helvetica, Arial, sans-serif;
+  --font-family-mono: 'Courier New', monospace;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+  
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  
+  /* Transitions */
+  --transition-fast: 150ms;
+  --transition-base: 250ms;
+  --transition-slow: 350ms;
+  --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] {
+  /* Color Palette - Dark Theme */
+  --color-background: #1f1f1f;
+  --color-foreground: #f6f6f6;
+  --color-primary: #396cd8;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #2f2f2f;
+  --color-secondary-foreground: #f6f6f6;
+  --color-accent: #646cff;
+  --color-accent-foreground: #ffffff;
+  --color-muted: #2f2f2f;
+  --color-muted-foreground: #9ca3af;
+  --color-border: #374151;
+  --color-input: #0f0f0f;
+  --color-input-foreground: #f6f6f6;
+  --color-ring: #396cd8;
+  
+  /* Tooltip Colors (adjusted for dark theme) */
+  --color-tooltip-background: var(--color-background);
+  --color-tooltip-foreground: var(--color-foreground);
+  
+  /* Status Colors (adjusted for dark theme) */
+  --color-success: #10b981;
+  --color-success-foreground: #ffffff;
+  --color-warning: #f59e0b;
+  --color-warning-foreground: #ffffff;
+  --color-error: #ef4444;
+  --color-error-foreground: #ffffff;
+  --color-info: #3b82f6;
+  --color-info-foreground: #ffffff;
+}
+

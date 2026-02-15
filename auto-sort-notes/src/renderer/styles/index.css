@@ -1,0 +1,83 @@
+/**
+ * Main CSS File
+ * 
+ * Purpose: Import Tailwind CSS and CSS variables.
+ * This is the main entry point for all styles.
+ * 
+ * Last Updated: 2024
+ * Status: Foundation - Ready for customization
+ */
+
+/* Comment 1000: Tailwind CSS Configuration
+ * This file imports Tailwind CSS directives and CSS variables.
+ * It serves as the main entry point for all application styles.
+ *
+ * Intended Interactions:
+ * - Imported by: main.tsx or App.tsx
+ * - Provides: Tailwind utilities and CSS variables to all components
+ *
+ * Logic Flow:
+ * 1. Import CSS variables for theming (must come first)
+ * 2. Import Tailwind base, components, and utilities
+ * 3. Set up base styles
+ * 4. Components use Tailwind classes and CSS variables
+ *
+ * Dependencies:
+ * - Tailwind CSS
+ * - CSS Variables (variables.css)
+ *
+ * Related Files:
+ * - tailwind.config.js (Tailwind configuration)
+ * - src/renderer/styles/variables.css (CSS variables)
+ * - All component files using Tailwind classes
+ *
+ * Related Comments:
+ * - Comment 1001 (variables.css - CSS Variables system)
+ * - Comment 1002 (tailwind.config.js - Tailwind configuration)
+ */
+
+/* Import CSS Variables - must come before all other statements */
+@import './variables.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base Styles */
+@layer base {
+  html,
+  body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  #root {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Component Styles */
+@layer components {
+  /* Component styles can be added here */
+}
+
+/* Utility Styles */
+@layer utilities {
+  /* Custom utilities can be added here */
+}
+
