@@ -299,7 +299,7 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps) {
               key={subItem.id}
               className={clsx(
                 'px-3 py-1.5 text-sm cursor-pointer transition-colors',
-                'hover:bg-muted',
+                'text-foreground hover:bg-muted',
                 subItem.disabled && 'opacity-50 cursor-not-allowed'
               )}
               onClick={() => handleSubmenuItemClick(subItem)}
@@ -312,7 +312,7 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps) {
               <div className="flex items-center justify-between">
                 <span>{subItem.label}</span>
                 {subItem.submenu && (
-                  <ChevronRight className="w-4 h-4 ml-2" />
+                  <ChevronRight className="w-4 h-4 ml-2 text-foreground" />
                 )}
               </div>
               {/* Nested submenu (for future use) */}
@@ -344,7 +344,7 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps) {
                         key={nestedItem.id}
                         className={clsx(
                           'px-3 py-1.5 text-sm cursor-pointer transition-colors',
-                          'hover:bg-muted',
+                          'text-foreground hover:bg-muted',
                           nestedItem.disabled && 'opacity-50 cursor-not-allowed'
                         )}
                         onClick={() => handleSubmenuItemClick(nestedItem)}
@@ -406,14 +406,14 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps) {
             <div
               className={clsx(
                 'px-3 py-1.5 text-sm cursor-pointer transition-colors flex items-center justify-between',
-                'hover:bg-muted',
+                'text-foreground hover:bg-muted',
                 item.disabled && 'opacity-50 cursor-not-allowed'
               )}
               onClick={() => handleItemClick(item)}
             >
               <span>{item.label}</span>
               {item.submenu && (
-                <ChevronRight className="w-4 h-4 ml-2" />
+                <ChevronRight className="w-4 h-4 ml-2 text-foreground" />
               )}
             </div>
             {renderSubmenu(item, menuItemRefs.current[item.id])}

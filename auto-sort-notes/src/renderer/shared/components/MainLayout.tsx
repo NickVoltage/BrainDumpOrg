@@ -65,7 +65,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       </aside>
 
       {/* Main content area */}
-      <main className="flex-1 h-full overflow-auto min-w-0" data-tab={currentTab}>
+      <main className="flex-1 h-full overflow-auto min-w-0" style={{ paddingRight: '16px' }} data-tab={currentTab}>
         {children}
       </main>
     </div>

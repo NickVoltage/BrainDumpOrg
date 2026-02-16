@@ -101,6 +101,19 @@ export function MenuBar({ items, className }: MenuBarProps) {
     }
   };
 
+  const handleMenuButtonMouseEnter = (menuId: string, e: React.MouseEvent) => {
+    handleMenuHover(menuId);
+    if (openMenuId !== menuId) {
+      (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-muted)';
+    }
+  };
+
+  const handleMenuButtonMouseLeave = (menuId: string, e: React.MouseEvent) => {
+    if (openMenuId !== menuId) {
+      (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+    }
+  };
+
   const handleSubItemClick = (subItem: MenuSubItem) => {
     if (!subItem.disabled && subItem.onClick) {
       subItem.onClick();
@@ -111,9 +124,14 @@ export function MenuBar({ items, className }: MenuBarProps) {
   return (
     <div 
       className={clsx(
-        'flex items-center gap-0 border-b border-border bg-background',
+        'flex items-center gap-0',
         className
       )}
+      style={{ 
+        paddingRight: '16px',
+        borderBottom: '1px solid var(--color-border)',
+        backgroundColor: 'var(--color-background)',
+      }}
     >
       {items.map((menuItem) => {
         const isOpen = openMenuId === menuItem.id;
@@ -126,12 +144,22 @@ export function MenuBar({ items, className }: MenuBarProps) {
           >
             <button
               onClick={() => handleMenuClick(menuItem.id)}
-              onMouseEnter={() => handleMenuHover(menuItem.id)}
-              className={clsx(
-                'px-3 py-1.5 text-sm text-foreground transition-colors',
-                'hover:bg-muted/50',
-                isOpen && 'bg-muted/50'
-              )}
+              onMouseEnter={(e) => handleMenuButtonMouseEnter(menuItem.id, e)}
+              onMouseLeave={(e) => handleMenuButtonMouseLeave(menuItem.id, e)}
+              className="px-3 py-1.5 text-sm transition-colors"
+              style={{
+                backgroundColor: isOpen ? 'var(--color-muted)' : 'transparent',
+                color: 'var(--color-foreground)',
+                border: 'none',
+                borderWidth: '0',
+                borderStyle: 'none',
+                outline: 'none',
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none',
+                boxShadow: 'none',
+                borderRadius: '0',
+              }}
               aria-label={menuItem.label}
               aria-expanded={isOpen}
               aria-haspopup="true"
@@ -143,6 +171,10 @@ export function MenuBar({ items, className }: MenuBarProps) {
             {isOpen && (
               <div
                 className="absolute left-0 top-full min-w-[180px] bg-background border border-border shadow-lg z-50 py-1"
+                style={{
+                  backgroundColor: 'var(--color-background)',
+                  borderColor: 'var(--color-border)',
+                }}
                 role="menu"
               >
                 {menuItem.items.map((subItem, index) => {
@@ -150,7 +182,8 @@ export function MenuBar({ items, className }: MenuBarProps) {
                     return (
                       <div
                         key={`separator-${index}`}
-                        className="h-px bg-border my-1 mx-1"
+                        className="h-px my-1 mx-1"
+                        style={{ backgroundColor: 'var(--color-border)' }}
                         role="separator"
                       />
                     );
@@ -161,17 +194,29 @@ export function MenuBar({ items, className }: MenuBarProps) {
                       key={subItem.id}
                       onClick={() => handleSubItemClick(subItem)}
                       disabled={subItem.disabled}
-                      className={clsx(
-                        'w-full flex items-center justify-between px-3 py-1.5 text-sm text-left transition-colors',
-                        'hover:bg-muted/50 text-foreground',
-                        'disabled:opacity-50 disabled:cursor-not-allowed',
-                        subItem.disabled && 'text-muted-foreground'
-                      )}
+                      className="w-full flex items-center justify-between px-3 py-1.5 text-sm text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{
+                        backgroundColor: 'transparent',
+                        color: subItem.disabled ? 'var(--color-muted-foreground)' : 'var(--color-foreground)',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!subItem.disabled) {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-muted)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!subItem.disabled) {
+                          (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                        }
+                      }}
                       role="menuitem"
                     >
                       <span>{subItem.label}</span>
                       {subItem.shortcut && (
-                        <span className="text-xs text-muted-foreground ml-6">
+                        <span 
+                          className="text-xs ml-6"
+                          style={{ color: 'var(--color-muted-foreground)' }}
+                        >
                           {subItem.shortcut}
                         </span>
                       )}

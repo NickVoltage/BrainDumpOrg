@@ -60,16 +60,34 @@ export function TabBar() {
           <div key={tab.id} className="relative group">
             <button
               onClick={() => navigateTo(tab.id)}
-              className={clsx(
-                'flex items-center justify-center w-full py-2.5 rounded-md transition-colors',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-              )}
+              className="flex items-center justify-center w-full py-2.5 rounded-md transition-colors"
+              style={{
+                backgroundColor: isActive ? 'var(--color-muted)' : 'transparent',
+                color: isActive ? 'var(--color-foreground)' : 'var(--color-muted-foreground)',
+                border: 'none',
+                outline: 'none',
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-muted)';
+                  (e.currentTarget as HTMLElement).style.color = 'var(--color-foreground)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                  (e.currentTarget as HTMLElement).style.color = 'var(--color-muted-foreground)';
+                }
+              }}
               aria-label={`Navigate to ${tab.label}`}
               aria-current={isActive ? 'page' : undefined}
             >
-              <Icon className="w-5 h-5" />
+              <Icon 
+                className="w-5 h-5"
+                style={{
+                  color: isActive ? 'var(--color-foreground)' : 'var(--color-muted-foreground)',
+                }}
+              />
             </button>
             {/* Tooltip on hover - uses theme CSS variables */}
             <div 

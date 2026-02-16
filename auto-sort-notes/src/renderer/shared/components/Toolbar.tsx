@@ -137,17 +137,34 @@ function ToolbarButton({
         onClick={item.onClick}
         onMouseEnter={handleMouseEnter}
         disabled={item.disabled}
-        className={clsx(
-          'flex items-center justify-center w-8 h-8 rounded transition-colors',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
-          variant === 'primary' && 'bg-primary text-primary-foreground hover:bg-primary/90',
-          variant === 'secondary' && 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-          variant === 'ghost' && 'hover:bg-muted text-muted-foreground hover:text-foreground',
-          variant === 'default' && 'hover:bg-muted text-foreground'
-        )}
+        className="flex items-center justify-center w-8 h-8 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{
+          backgroundColor: 'transparent',
+          color: 'var(--color-foreground)',
+          border: 'none',
+          outline: 'none',
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          MozAppearance: 'none',
+        }}
+        onMouseEnterCapture={(e) => {
+          if (!item.disabled) {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-muted)';
+          }
+        }}
+        onMouseLeaveCapture={(e) => {
+          if (!item.disabled) {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+          }
+        }}
         aria-label={item.label}
       >
-        {Icon && <Icon className="w-4 h-4" />}
+        {Icon && <Icon 
+          className="w-4 h-4"
+          style={{
+            color: 'var(--color-foreground)',
+          }}
+        />}
       </button>
       {/* Tooltip on hover - dynamically positioned based on boundaries */}
       <div 
@@ -250,9 +267,14 @@ export function Toolbar({ items, className }: ToolbarProps) {
     <div 
       ref={toolbarRef}
       className={clsx(
-        'flex items-center gap-1 px-2 py-1.5 border-b border-border bg-background',
+        'flex items-center gap-1 pl-6 py-1.5',
         className
       )}
+      style={{ 
+        paddingRight: '16px',
+        borderBottom: '1px solid var(--color-border)',
+        backgroundColor: 'var(--color-background)',
+      }}
     >
       {items.map((item) => (
         <ToolbarButton key={item.id} item={item} boundaries={boundaries} />

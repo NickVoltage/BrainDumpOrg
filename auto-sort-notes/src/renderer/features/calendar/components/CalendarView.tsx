@@ -46,17 +46,39 @@
 // - Comment 102 (CalendarDay.tsx - day view component)
 // - Comment 104 (useCalendar.ts - calendar operations hook)
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MenuBar } from '../../../shared/components/MenuBar';
 import { Toolbar } from '../../../shared/components/Toolbar';
 import { CalendarMonth } from './CalendarMonth';
 import { dateUtils } from '../../../shared/utils/date-utils';
 import { Plus, Calendar as CalendarIcon, CalendarDays, CalendarRange, Search, RotateCcw, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
+import { clsx } from 'clsx';
 
 export const CalendarView = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewType, setViewType] = useState<'month' | 'week' | 'day'>('month');
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const monthPickerRef = useRef<HTMLDivElement>(null);
+  const yearPickerRef = useRef<HTMLDivElement>(null);
+
+  // Close pickers when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (monthPickerRef.current && !monthPickerRef.current.contains(event.target as Node)) {
+        setShowMonthPicker(false);
+      }
+      if (yearPickerRef.current && !yearPickerRef.current.contains(event.target as Node)) {
+        setShowYearPicker(false);
+      }
+    };
+
+    if (showMonthPicker || showYearPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showMonthPicker, showYearPicker]);
 
   const handlePreviousMonth = () => {
     setCurrentDate(dateUtils.subMonths(currentDate, 1));
@@ -69,6 +91,44 @@ export const CalendarView = () => {
   const handleToday = () => {
     setCurrentDate(new Date());
   };
+
+  const handleDateClick = (e: React.MouseEvent) => {
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const textWidth = rect.width;
+    
+    // If click is in the left 60% of the text, open month picker
+    // If click is in the right 40% of the text, open year picker
+    if (clickX < textWidth * 0.6) {
+      setShowMonthPicker(!showMonthPicker);
+      setShowYearPicker(false);
+    } else {
+      setShowYearPicker(!showYearPicker);
+      setShowMonthPicker(false);
+    }
+  };
+
+  const handleMonthSelect = (month: number) => {
+    setCurrentDate(new Date(currentDate.getFullYear(), month, 1));
+    setShowMonthPicker(false);
+  };
+
+  const handleYearSelect = (year: number) => {
+    setCurrentDate(new Date(year, currentDate.getMonth(), 1));
+    setShowYearPicker(false);
+  };
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth();
+  
+  // Generate year range (current year ± 10 years)
+  const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
   // Comment 1260: Calendar Menu Bar - File Menu
   // File menu dropdown with event operations
   // - New Event: Creates new calendar event (Comment 1261)
@@ -381,36 +441,153 @@ export const CalendarView = () => {
       <Toolbar items={toolbarItems} />
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Calendar navigation header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between pl-6 pt-4 pb-4 border-b border-border" style={{ paddingRight: '16px' }}>
+          <div className="flex items-center">
             <button
               onClick={handlePreviousMonth}
-              className="p-1 hover:bg-muted rounded transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-lg leading-none flex items-center bg-transparent border-none outline-none"
+              style={{ 
+                padding: '4px 24px 4px 0',
+                margin: 0,
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none'
+              }}
               aria-label="Previous month"
             >
-              <ChevronLeft className="w-5 h-5" />
+              &lt;
             </button>
-            <h2 className="text-xl font-semibold min-w-[200px] text-center">
-              {format(currentDate, 'MMMM yyyy')}
-            </h2>
+            <div className="relative min-w-[200px] text-center">
+              <h2 
+                className="text-xl font-semibold cursor-pointer"
+                onClick={handleDateClick}
+                aria-label="Select month or year"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleDateClick(e as any);
+                  }
+                }}
+              >
+                {format(currentDate, 'MMMM yyyy')}
+              </h2>
+              
+              {/* Month Picker Dropdown */}
+              {showMonthPicker && (
+                <div 
+                  ref={monthPickerRef}
+                  className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-background border border-border rounded-md shadow-lg z-50 p-2 min-w-[150px] max-h-[300px] overflow-y-auto"
+                  style={{
+                    backgroundColor: 'var(--color-background)',
+                    borderColor: 'var(--color-border)',
+                  }}
+                >
+                  <div className="flex flex-col gap-1">
+                    {months.map((month, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleMonthSelect(index)}
+                        className="px-3 py-2 text-base rounded transition-colors text-left"
+                        style={{
+                          backgroundColor: currentMonth === index ? 'var(--color-primary)' : 'transparent',
+                          color: currentMonth === index ? 'var(--color-primary-foreground)' : 'var(--color-foreground)',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (currentMonth !== index) {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-muted)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (currentMonth !== index) {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                          }
+                        }}
+                      >
+                        {month}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Year Picker Dropdown */}
+              {showYearPicker && (
+                <div 
+                  ref={yearPickerRef}
+                  className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 bg-background border border-border rounded-md shadow-lg z-50 p-2 min-w-[120px] max-h-[300px] overflow-y-auto"
+                  style={{
+                    backgroundColor: 'var(--color-background)',
+                    borderColor: 'var(--color-border)',
+                  }}
+                >
+                  <div className="flex flex-col gap-1">
+                    {years.map((year) => (
+                      <button
+                        key={year}
+                        onClick={() => handleYearSelect(year)}
+                        className="px-3 py-2 text-base rounded transition-colors text-center"
+                        style={{
+                          backgroundColor: currentYear === year ? 'var(--color-primary)' : 'transparent',
+                          color: currentYear === year ? 'var(--color-primary-foreground)' : 'var(--color-foreground)',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (currentYear !== year) {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-muted)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (currentYear !== year) {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+                          }
+                        }}
+                      >
+                        {year}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <button
               onClick={handleNextMonth}
-              className="p-1 hover:bg-muted rounded transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-lg leading-none flex items-center bg-transparent border-none outline-none"
+              style={{ 
+                padding: '4px 0 4px 24px',
+                margin: 0,
+                appearance: 'none',
+                WebkitAppearance: 'none',
+                MozAppearance: 'none'
+              }}
               aria-label="Next month"
             >
-              <ChevronRight className="w-5 h-5" />
+              &gt;
             </button>
           </div>
           <button
             onClick={handleToday}
-            className="px-4 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+            className="px-4 py-1.5 text-sm rounded transition-colors"
+            style={{ 
+              marginRight: '0',
+              backgroundColor: 'var(--color-muted)',
+              color: 'var(--color-foreground)',
+              border: '1px solid var(--color-border)',
+              outline: 'none',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-secondary)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-muted)';
+            }}
           >
             Today
           </button>
         </div>
 
         {/* Calendar content */}
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-auto pl-6 pt-4 pb-4" style={{ paddingRight: '16px' }}>
           {viewType === 'month' && (
             <CalendarMonth currentDate={currentDate} events={[]} />
           )}

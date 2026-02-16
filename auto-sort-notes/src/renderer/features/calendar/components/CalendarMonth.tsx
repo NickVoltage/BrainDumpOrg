@@ -328,12 +328,17 @@ export const CalendarMonth = ({ currentDate, onDateClick, events = [] }: Calenda
             >
               {/* Day number */}
               <div
-                className={clsx(
-                  'text-sm font-medium mb-1',
-                  isCurrentDay && 'text-primary font-bold',
-                  !isCurrentMonth && 'text-muted-foreground',
-                  hasHoliday && !isCurrentDay && 'text-amber-800 dark:text-amber-200 font-semibold'
-                )}
+                className="text-sm font-medium mb-1"
+                style={{
+                  color: isCurrentDay 
+                    ? 'var(--color-primary)' 
+                    : !isCurrentMonth 
+                    ? 'var(--color-muted-foreground)'
+                    : hasHoliday
+                    ? 'var(--color-foreground)'
+                    : 'var(--color-foreground)',
+                  fontWeight: isCurrentDay ? 'bold' : hasHoliday ? '600' : 'normal',
+                }}
               >
                 {format(day, 'd')}
               </div>
@@ -343,19 +348,20 @@ export const CalendarMonth = ({ currentDate, onDateClick, events = [] }: Calenda
                 <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
                   {holidays.slice(0, 2).map(holiday => {
                     const isFixed = holiday.type === 'fixed';
-                    // Use inline styles to ensure colors show (works regardless of Tailwind)
+                    // Use theme-aware colors that work in both light and dark themes
+                    // Use theme-aware colors that ensure readability in both light and dark themes
                     const style = isFixed
                       ? { 
-                          backgroundColor: 'rgba(239, 68, 68, 0.35)', 
-                          color: '#991b1b', 
-                          borderColor: 'rgba(239, 68, 68, 0.6)',
+                          backgroundColor: 'rgba(239, 68, 68, 0.4)', 
+                          color: '#ffffff', // White text for better contrast on red background
+                          borderColor: 'rgba(239, 68, 68, 0.7)',
                           borderWidth: '1px',
                           borderStyle: 'solid'
                         }
                       : { 
-                          backgroundColor: 'rgba(59, 130, 246, 0.35)', 
-                          color: '#1e40af', 
-                          borderColor: 'rgba(59, 130, 246, 0.6)',
+                          backgroundColor: 'rgba(59, 130, 246, 0.4)', 
+                          color: '#ffffff', // White text for better contrast on blue background
+                          borderColor: 'rgba(59, 130, 246, 0.7)',
                           borderWidth: '1px',
                           borderStyle: 'solid'
                         };
@@ -383,16 +389,34 @@ export const CalendarMonth = ({ currentDate, onDateClick, events = [] }: Calenda
                 <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
                   {dayEvents.slice(0, 2).map((event) => {
                     const eventColor: EventColor = event.color || 'blue';
-                    const colorClasses = EVENT_COLORS[eventColor];
+                    // Use inline styles with high contrast colors for readability
+                    const getEventStyle = (color: EventColor) => {
+                      const colorMap: Record<EventColor, { bg: string; text: string; border: string }> = {
+                        blue: { bg: 'rgba(59, 130, 246, 0.4)', text: '#ffffff', border: 'rgba(59, 130, 246, 0.7)' },
+                        green: { bg: 'rgba(34, 197, 94, 0.4)', text: '#ffffff', border: 'rgba(34, 197, 94, 0.7)' },
+                        red: { bg: 'rgba(239, 68, 68, 0.4)', text: '#ffffff', border: 'rgba(239, 68, 68, 0.7)' },
+                        yellow: { bg: 'rgba(234, 179, 8, 0.5)', text: '#000000', border: 'rgba(234, 179, 8, 0.7)' },
+                        purple: { bg: 'rgba(168, 85, 247, 0.4)', text: '#ffffff', border: 'rgba(168, 85, 247, 0.7)' },
+                        orange: { bg: 'rgba(249, 115, 22, 0.4)', text: '#ffffff', border: 'rgba(249, 115, 22, 0.7)' },
+                        pink: { bg: 'rgba(236, 72, 153, 0.4)', text: '#ffffff', border: 'rgba(236, 72, 153, 0.7)' },
+                        cyan: { bg: 'rgba(6, 182, 212, 0.4)', text: '#ffffff', border: 'rgba(6, 182, 212, 0.7)' },
+                        gray: { bg: 'rgba(107, 114, 128, 0.4)', text: '#ffffff', border: 'rgba(107, 114, 128, 0.7)' },
+                        indigo: { bg: 'rgba(99, 102, 241, 0.4)', text: '#ffffff', border: 'rgba(99, 102, 241, 0.7)' },
+                      };
+                      return colorMap[color];
+                    };
+                    const eventStyle = getEventStyle(eventColor);
                     return (
                       <div
                         key={event.id}
-                        className={clsx(
-                          'text-xs px-1.5 py-0.5 rounded border truncate font-medium',
-                          colorClasses.bg,
-                          colorClasses.text,
-                          colorClasses.border
-                        )}
+                        className="text-xs px-1.5 py-0.5 rounded border truncate font-medium"
+                        style={{
+                          backgroundColor: eventStyle.bg,
+                          color: eventStyle.text,
+                          borderColor: eventStyle.border,
+                          borderWidth: '1px',
+                          borderStyle: 'solid',
+                        }}
                         title={event.title}
                       >
                         {event.emoji && <span className="mr-1">{event.emoji}</span>}
@@ -401,7 +425,10 @@ export const CalendarMonth = ({ currentDate, onDateClick, events = [] }: Calenda
                     );
                   })}
                   {dayEvents.length > 2 && (
-                    <div className="text-xs text-muted-foreground px-1">
+                    <div 
+                      className="text-xs px-1"
+                      style={{ color: 'var(--color-muted-foreground)' }}
+                    >
                       +{dayEvents.length - 2} more
                     </div>
                   )}
@@ -413,16 +440,34 @@ export const CalendarMonth = ({ currentDate, onDateClick, events = [] }: Calenda
                 <div className="flex flex-col gap-0.5 flex-1 overflow-hidden mt-0.5">
                   {dayEvents.slice(0, 1).map((event) => {
                     const eventColor: EventColor = event.color || 'green';
-                    const colorClasses = EVENT_COLORS[eventColor];
+                    // Use inline styles with CSS variables for theme-aware colors
+                    const getEventStyle = (color: EventColor) => {
+                      const colorMap: Record<EventColor, { bg: string; text: string; border: string }> = {
+                        blue: { bg: 'rgba(59, 130, 246, 0.4)', text: '#ffffff', border: 'rgba(59, 130, 246, 0.7)' },
+                        green: { bg: 'rgba(34, 197, 94, 0.4)', text: '#ffffff', border: 'rgba(34, 197, 94, 0.7)' },
+                        red: { bg: 'rgba(239, 68, 68, 0.4)', text: '#ffffff', border: 'rgba(239, 68, 68, 0.7)' },
+                        yellow: { bg: 'rgba(234, 179, 8, 0.5)', text: '#000000', border: 'rgba(234, 179, 8, 0.7)' },
+                        purple: { bg: 'rgba(168, 85, 247, 0.4)', text: '#ffffff', border: 'rgba(168, 85, 247, 0.7)' },
+                        orange: { bg: 'rgba(249, 115, 22, 0.4)', text: '#ffffff', border: 'rgba(249, 115, 22, 0.7)' },
+                        pink: { bg: 'rgba(236, 72, 153, 0.4)', text: '#ffffff', border: 'rgba(236, 72, 153, 0.7)' },
+                        cyan: { bg: 'rgba(6, 182, 212, 0.4)', text: '#ffffff', border: 'rgba(6, 182, 212, 0.7)' },
+                        gray: { bg: 'rgba(107, 114, 128, 0.4)', text: '#ffffff', border: 'rgba(107, 114, 128, 0.7)' },
+                        indigo: { bg: 'rgba(99, 102, 241, 0.4)', text: '#ffffff', border: 'rgba(99, 102, 241, 0.7)' },
+                      };
+                      return colorMap[color];
+                    };
+                    const eventStyle = getEventStyle(eventColor);
                     return (
                       <div
                         key={event.id}
-                        className={clsx(
-                          'text-xs px-1.5 py-0.5 rounded border truncate font-medium',
-                          colorClasses.bg,
-                          colorClasses.text,
-                          colorClasses.border
-                        )}
+                        className="text-xs px-1.5 py-0.5 rounded border truncate font-medium"
+                        style={{
+                          backgroundColor: eventStyle.bg,
+                          color: eventStyle.text,
+                          borderColor: eventStyle.border,
+                          borderWidth: '1px',
+                          borderStyle: 'solid',
+                        }}
                         title={event.title}
                       >
                         {event.emoji && <span className="mr-1">{event.emoji}</span>}

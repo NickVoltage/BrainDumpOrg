@@ -54,12 +54,45 @@ export function Button({
 }: ButtonProps) {
   const baseStyles = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50';
   
-  const variants = {
-    primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
-    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-    outline: 'border border-border bg-background hover:bg-accent hover:text-accent-foreground',
-    ghost: 'hover:bg-accent hover:text-accent-foreground',
-    destructive: 'bg-error text-error-foreground hover:bg-error/90',
+  const getVariantStyles = (variant: string) => {
+    switch (variant) {
+      case 'primary':
+        return {
+          backgroundColor: 'var(--color-primary)',
+          color: 'var(--color-primary-foreground)',
+          border: 'none',
+        };
+      case 'secondary':
+        return {
+          backgroundColor: 'var(--color-secondary)',
+          color: 'var(--color-secondary-foreground)',
+          border: 'none',
+        };
+      case 'outline':
+        return {
+          backgroundColor: 'var(--color-background)',
+          color: 'var(--color-foreground)',
+          border: '1px solid var(--color-border)',
+        };
+      case 'ghost':
+        return {
+          backgroundColor: 'transparent',
+          color: 'var(--color-foreground)',
+          border: 'none',
+        };
+      case 'destructive':
+        return {
+          backgroundColor: 'var(--color-error)',
+          color: 'var(--color-error-foreground)',
+          border: 'none',
+        };
+      default:
+        return {
+          backgroundColor: 'var(--color-primary)',
+          color: 'var(--color-primary-foreground)',
+          border: 'none',
+        };
+    }
   };
   
   const sizes = {
@@ -68,15 +101,42 @@ export function Button({
     lg: 'h-11 px-8',
   };
 
+  const variantStyles = getVariantStyles(variant);
+
   return (
     <button
       className={clsx(
         baseStyles,
-        variants[variant],
         sizes[size],
         className
       )}
+      style={variantStyles}
       disabled={disabled || isLoading}
+      onMouseEnter={(e) => {
+        if (!disabled && !isLoading) {
+          if (variant === 'primary') {
+            (e.currentTarget as HTMLElement).style.opacity = '0.9';
+          } else if (variant === 'secondary') {
+            (e.currentTarget as HTMLElement).style.opacity = '0.8';
+          } else if (variant === 'outline') {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-accent)';
+            (e.currentTarget as HTMLElement).style.color = 'var(--color-accent-foreground)';
+          } else if (variant === 'ghost') {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--color-accent)';
+            (e.currentTarget as HTMLElement).style.color = 'var(--color-accent-foreground)';
+          } else if (variant === 'destructive') {
+            (e.currentTarget as HTMLElement).style.opacity = '0.9';
+          }
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!disabled && !isLoading) {
+          Object.assign((e.currentTarget as HTMLElement).style, variantStyles);
+          if (variant === 'primary' || variant === 'secondary' || variant === 'destructive') {
+            (e.currentTarget as HTMLElement).style.opacity = '1';
+          }
+        }
+      }}
       {...props}
     >
       {isLoading ? (
