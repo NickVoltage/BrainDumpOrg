@@ -46,11 +46,29 @@
 // - Comment 102 (CalendarDay.tsx - day view component)
 // - Comment 104 (useCalendar.ts - calendar operations hook)
 
+import { useState } from 'react';
 import { MenuBar } from '../../../shared/components/MenuBar';
 import { Toolbar } from '../../../shared/components/Toolbar';
-import { Plus, Calendar as CalendarIcon, CalendarDays, CalendarRange, Search, RotateCcw, Settings } from 'lucide-react';
+import { CalendarMonth } from './CalendarMonth';
+import { dateUtils } from '../../../shared/utils/date-utils';
+import { Plus, Calendar as CalendarIcon, CalendarDays, CalendarRange, Search, RotateCcw, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
+import { format } from 'date-fns';
 
 export const CalendarView = () => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [viewType, setViewType] = useState<'month' | 'week' | 'day'>('month');
+
+  const handlePreviousMonth = () => {
+    setCurrentDate(dateUtils.subMonths(currentDate, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(dateUtils.addMonths(currentDate, 1));
+  };
+
+  const handleToday = () => {
+    setCurrentDate(new Date());
+  };
   // Comment 1260: Calendar Menu Bar - File Menu
   // File menu dropdown with event operations
   // - New Event: Creates new calendar event (Comment 1261)
@@ -177,14 +195,14 @@ export const CalendarView = () => {
           id: 'month-view',
           label: 'Month View',
           onClick: () => {
-            // TODO: Implement month view (Comment 1265)
-            console.log('Month View - placeholder');
+            setViewType('month');
           },
         },
         {
           id: 'week-view',
           label: 'Week View',
           onClick: () => {
+            setViewType('week');
             // TODO: Implement week view (Comment 1266)
             console.log('Week View - placeholder');
           },
@@ -193,6 +211,7 @@ export const CalendarView = () => {
           id: 'day-view',
           label: 'Day View',
           onClick: () => {
+            setViewType('day');
             // TODO: Implement day view (Comment 1267)
             console.log('Day View - placeholder');
           },
@@ -203,8 +222,7 @@ export const CalendarView = () => {
           label: 'Go to Today',
           shortcut: 'Ctrl+T',
           onClick: () => {
-            // TODO: Implement go to today (Comment 1268)
-            console.log('Go to Today - placeholder');
+            handleToday();
           },
         },
       ],
@@ -306,8 +324,7 @@ export const CalendarView = () => {
       label: 'Month',
       icon: CalendarIcon,
       onClick: () => {
-        // TODO: Implement month view (Comment 1265)
-        console.log('Month View clicked - placeholder');
+        setViewType('month');
       },
     },
     {
@@ -315,6 +332,7 @@ export const CalendarView = () => {
       label: 'Week',
       icon: CalendarRange,
       onClick: () => {
+        setViewType('week');
         // TODO: Implement week view (Comment 1266)
         console.log('Week View clicked - placeholder');
       },
@@ -324,6 +342,7 @@ export const CalendarView = () => {
       label: 'Day',
       icon: CalendarDays,
       onClick: () => {
+        setViewType('day');
         // TODO: Implement day view (Comment 1267)
         console.log('Day View clicked - placeholder');
       },
@@ -333,8 +352,7 @@ export const CalendarView = () => {
       label: 'Today',
       icon: RotateCcw,
       onClick: () => {
-        // TODO: Implement go to today (Comment 1268)
-        console.log('Today clicked - placeholder');
+        handleToday();
       },
     },
     {
@@ -361,8 +379,52 @@ export const CalendarView = () => {
     <div className="flex flex-col h-full">
       <MenuBar items={menuItems} />
       <Toolbar items={toolbarItems} />
-      <div className="flex-1 p-6 overflow-auto">
-        {/* Calendar content will go here */}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Calendar navigation header */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePreviousMonth}
+              className="p-1 hover:bg-muted rounded transition-colors"
+              aria-label="Previous month"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <h2 className="text-xl font-semibold min-w-[200px] text-center">
+              {format(currentDate, 'MMMM yyyy')}
+            </h2>
+            <button
+              onClick={handleNextMonth}
+              className="p-1 hover:bg-muted rounded transition-colors"
+              aria-label="Next month"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+          <button
+            onClick={handleToday}
+            className="px-4 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+          >
+            Today
+          </button>
+        </div>
+
+        {/* Calendar content */}
+        <div className="flex-1 overflow-auto p-4">
+          {viewType === 'month' && (
+            <CalendarMonth currentDate={currentDate} events={[]} />
+          )}
+          {viewType === 'week' && (
+            <div className="text-center text-muted-foreground py-8">
+              Week view - Coming soon
+            </div>
+          )}
+          {viewType === 'day' && (
+            <div className="text-center text-muted-foreground py-8">
+              Day view - Coming soon
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
