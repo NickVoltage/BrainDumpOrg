@@ -221,4 +221,3 @@ export function getAvailableContactTypes(existingContacts: Array<{ contactType?:
   
   return [...DEFAULT_CONTACT_TYPES, ...Array.from(customTypes)];
 }
-

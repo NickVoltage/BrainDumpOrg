@@ -217,5 +217,9 @@ export const contactService = {
 
     return { ok: true, value: importedContacts };
   },
+
+  async deleteAllContacts(): Promise<Result<void, Error>> {
+    return contactStorage.deleteAllContacts();
+  },
 };
 

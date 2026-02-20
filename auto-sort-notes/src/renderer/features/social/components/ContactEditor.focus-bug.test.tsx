@@ -136,4 +136,3 @@ describe('ContactEditor Input Focus Bug - REPRODUCTION TEST', () => {
     });
   });
 });
-

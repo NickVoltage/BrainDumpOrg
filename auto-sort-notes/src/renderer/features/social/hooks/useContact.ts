@@ -74,17 +74,26 @@ export function useContact(initialContactId?: string) {
     }
   }, []);
 
-  const updateContact = useCallback(async (updates: Partial<Omit<Contact, 'id' | 'createdAt'>>) => {
-    if (!contact) {
+  const updateContact = useCallback(async (
+    idOrUpdates: string | Partial<Omit<Contact, 'id' | 'createdAt'>>,
+    updatesIfId?: Partial<Omit<Contact, 'id' | 'createdAt'>>
+  ) => {
+    const id = typeof idOrUpdates === 'string' ? idOrUpdates : contact?.id;
+    const updates = typeof idOrUpdates === 'string' ? updatesIfId : idOrUpdates;
+    if (!id) {
       setError(new Error('No contact selected for update.'));
       return { ok: false, error: new Error('No contact selected for update.') } as Result<Contact, Error>;
+    }
+    if (!updates) {
+      setError(new Error('No updates provided.'));
+      return { ok: false, error: new Error('No updates provided.') } as Result<Contact, Error>;
     }
     setLoading(true);
     setError(null);
     try {
-      const result = await contactService.updateContact(contact.id, updates);
+      const result = await contactService.updateContact(id, updates);
       if (result.ok) {
-        setContact(result.value);
+        setContact(prev => (prev?.id === id ? result.value : prev));
       } else {
         setError(result.error);
       }
@@ -96,7 +105,7 @@ export function useContact(initialContactId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [contact]);
+  }, [contact?.id]);
 
   const deleteContact = useCallback(async () => {
     if (!contact) {

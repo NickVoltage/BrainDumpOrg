@@ -23,12 +23,13 @@
 // - Comment 406 (ContactDetail.tsx - contact detail component)
 // - Comment 407 (ContactEditor.tsx - contact editor component)
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { MenuBar } from '../../../shared/components/MenuBar';
 import { ContactList, ContactListRef } from './ContactList';
 import { ContactDetail } from './ContactDetail';
 import { ContactEditor } from './ContactEditor';
 import { ContactImportDialog } from './ContactImportDialog';
+import { DeleteAllContactsDialog } from './DeleteAllContactsDialog';
 import { Contact } from '../types';
 import { contactService } from '../services/contact-service';
 
@@ -39,9 +40,22 @@ export const SocialHub = () => {
   const [selectedContact, setSelectedContact] = useState<Contact | undefined>(undefined);
   const [showContactEditor, setShowContactEditor] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+  const [contactCount, setContactCount] = useState(0);
   const [editingContact, setEditingContact] = useState<Contact | undefined>(undefined);
   const [contactReloadKey, setContactReloadKey] = useState(0);
   const contactListRef = useRef<ContactListRef | null>(null);
+
+  // Get contact count for delete all dialog
+  useEffect(() => {
+    const updateContactCount = async () => {
+      const result = await contactService.getAllContacts();
+      if (result.ok) {
+        setContactCount(result.value.length);
+      }
+    };
+    updateContactCount();
+  }, [showDeleteAllDialog, showImportDialog, showContactEditor]);
 
   const handleSelectContact = (contact: Contact) => {
     setSelectedContact(contact);
@@ -75,6 +89,12 @@ export const SocialHub = () => {
     if (contactListRef.current) {
       contactListRef.current.refresh();
     }
+    // Update contact count
+    contactService.getAllContacts().then(result => {
+      if (result.ok) {
+        setContactCount(result.value.length);
+      }
+    });
   };
 
   const handleImportContacts = () => {
@@ -86,6 +106,29 @@ export const SocialHub = () => {
     // Refresh contact list if available
     if (contactListRef.current) {
       contactListRef.current.refresh();
+    }
+    // Update contact count
+    contactService.getAllContacts().then(result => {
+      if (result.ok) {
+        setContactCount(result.value.length);
+      }
+    });
+  };
+
+  const handleDeleteAllContacts = async () => {
+    const result = await contactService.deleteAllContacts();
+    if (result.ok) {
+      // Clear selected contact if viewing one
+      setSelectedContact(undefined);
+      setCurrentView('list');
+      // Refresh contact list
+      if (contactListRef.current) {
+        contactListRef.current.refresh();
+      }
+      // Update contact count
+      setContactCount(0);
+    } else {
+      alert(`Error deleting contacts: ${result.error.message}`);
     }
   };
 
@@ -106,6 +149,16 @@ export const SocialHub = () => {
           label: 'Import Contacts...',
           shortcut: 'Ctrl+I',
           onClick: handleImportContacts,
+        },
+        {
+          id: 'separator-1',
+          label: '',
+          separator: true,
+        },
+        {
+          id: 'delete-all-contacts',
+          label: 'Delete All Contacts...',
+          onClick: () => setShowDeleteAllDialog(true),
         },
       ],
     },
@@ -196,6 +249,16 @@ export const SocialHub = () => {
           }}
           onCancel={handleImportComplete}
           onClose={handleImportComplete}
+        />
+      )}
+
+      {/* Delete All Contacts Dialog */}
+      {showDeleteAllDialog && (
+        <DeleteAllContactsDialog
+          contactCount={contactCount}
+          onConfirm={handleDeleteAllContacts}
+          onCancel={() => setShowDeleteAllDialog(false)}
+          onClose={() => setShowDeleteAllDialog(false)}
         />
       )}
     </div>

@@ -61,53 +61,92 @@ function escapeCSVValue(value: string): string {
 }
 
 /**
- * Unescape CSV value
+ * Unescape CSV value (used when reading a pre-split cell that may still have quotes)
  */
 function unescapeCSVValue(value: string): string {
-  if (!value) return '';
-  // Remove surrounding quotes if present
-  if (value.startsWith('"') && value.endsWith('"')) {
-    value = value.slice(1, -1);
-    // Unescape double quotes
-    value = value.replace(/""/g, '"');
+  if (value == null) return '';
+  const s = String(value).trim();
+  if (!s) return '';
+  if (s.startsWith('"') && s.endsWith('"')) {
+    return s.slice(1, -1).replace(/""/g, '"');
   }
-  return value;
+  return s;
 }
 
+/** Multi-value separator used by Google in a single cell (space-colon-colon-colon-space) */
+const MULTI_VALUE_SEP = ' ::: ';
+
 /**
- * Parse CSV line (handles quoted values with commas and newlines)
+ * Parse CSV content into rows of cells (RFC 4180 style).
+ * - Comma separates columns; newline separates rows.
+ * - Field may be wrapped in double quotes if it contains comma or newline.
+ * - Inside quoted field, "" represents one literal double quote.
+ * - BOM at start is stripped. \r\n and \r are treated as row terminators.
+ * Each cell is returned unescaped (no surrounding quotes, "" already converted to ").
  */
-function parseCSVLine(line: string): string[] {
-  const values: string[] = [];
-  let current = '';
+function parseCSVRows(csvContent: string): string[][] {
+  const rows: string[][] = [];
+  let content = csvContent;
+  if (content.length > 0 && content.charCodeAt(0) === 0xFEFF) content = content.slice(1);
+  let i = 0;
+  const len = content.length;
+  let currentRow: string[] = [];
+  let currentCell = '';
   let inQuotes = false;
-  
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    const nextChar = line[i + 1];
-    
-    if (char === '"') {
-      if (inQuotes && nextChar === '"') {
-        // Escaped quote
-        current += '"';
-        i++; // Skip next quote
+
+  while (i < len) {
+    const c = content[i];
+    const next = content[i + 1];
+
+    if (inQuotes) {
+      if (c === '"' && next === '"') {
+        currentCell += '"';
+        i += 2;
+      } else if (c === '"') {
+        inQuotes = false;
+        i += 1;
       } else {
-        // Toggle quote state
-        inQuotes = !inQuotes;
+        currentCell += c;
+        i += 1;
       }
-    } else if (char === ',' && !inQuotes) {
-      // End of field
-      values.push(current);
-      current = '';
-    } else {
-      current += char;
+      continue;
     }
+
+    if (c === ',') {
+      currentRow.push(currentCell);
+      currentCell = '';
+      i += 1;
+      continue;
+    }
+
+    if (c === '\n' || c === '\r') {
+      currentRow.push(currentCell);
+      if (currentRow.length > 0 || currentCell !== '') {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentCell = '';
+      i += 1;
+      if (c === '\r' && next === '\n') i += 1;
+      continue;
+    }
+
+    if (c === '"') {
+      inQuotes = true;
+      i += 1;
+      continue;
+    }
+
+    currentCell += c;
+    i += 1;
   }
-  
-  // Add last field
-  values.push(current);
-  
-  return values;
+
+  currentRow.push(currentCell);
+  if (currentRow.length > 0 || currentCell !== '') {
+    rows.push(currentRow);
+  }
+
+  return rows;
 }
 
 /**
@@ -228,26 +267,22 @@ export function contactToGoogleCSV(contact: Contact): string {
 }
 
 /**
- * Parse Google Contacts CSV row to Contact
+ * Parse Google Contacts CSV row to Contact.
+ * Uses only headerMap for column lookup (no fallback indices) so column shifts cannot occur.
  */
 export function googleCSVToContact(row: string[], headerMap?: Map<string, number>, contactId?: string): Contact {
-  // Helper to get value by header name or index (for backward compatibility)
-  const getValue = (headerName: string, fallbackIndex?: number) => {
-    if (headerMap) {
-      const index = headerMap.get(headerName);
-      if (index !== undefined && row[index] !== undefined) {
-        return unescapeCSVValue(row[index]);
-      }
-    }
-    if (fallbackIndex !== undefined) {
-      return unescapeCSVValue(row[fallbackIndex] || '');
-    }
-    return '';
+  const getValue = (headerName: string): string => {
+    if (!headerMap) return '';
+    let index = headerMap.get(headerName) ?? headerMap.get(headerName.trim()) ?? headerMap.get(headerName.toLowerCase());
+    if (index === undefined) return '';
+    const raw = row[index];
+    if (raw === undefined || raw === '') return '';
+    return unescapeCSVValue(raw);
   };
   
   // Parse birthday
   let birthday: Date | string | undefined;
-  const birthdayStr = getValue('Birthday', 13);
+  const birthdayStr = getValue('Birthday');
   if (birthdayStr) {
     try {
       birthday = new Date(birthdayStr);
@@ -260,40 +295,54 @@ export function googleCSVToContact(row: string[], headerMap?: Map<string, number
   }
   
   // Parse labels (split by " ::: ")
-  const labelsStr = getValue('Labels', 16);
-  const labels = labelsStr ? labelsStr.split(' ::: ').filter(l => l.trim()) : [];
-  
-  // Parse emails
+  const labelsStr = getValue('Labels');
+  const labels = labelsStr ? labelsStr.split(MULTI_VALUE_SEP).map(s => s.trim()).filter(Boolean) : [];
+
+  // Parse emails (only add values that look like email; never add phone numbers)
   const emails: LabeledField[] = [];
+  const seenEmails = new Set<string>();
   for (let i = 1; i <= 3; i++) {
-    const label = getValue(`E-mail ${i} - Label`, 17 + (i - 1) * 2);
-    const value = getValue(`E-mail ${i} - Value`, 18 + (i - 1) * 2);
-    if (label || value) {
-      emails.push({ label: label || '* Other', value });
+    const label = getValue(`E-mail ${i} - Label`);
+    let value = getValue(`E-mail ${i} - Value`);
+    if (!value && !label) continue;
+    const parts = value ? value.split(MULTI_VALUE_SEP).map(v => v.trim()).filter(Boolean) : [value].filter(Boolean) as string[];
+    for (const v of parts) {
+      if (!v || seenEmails.has(v.toLowerCase())) continue;
+      if (looksLikePhone(v)) continue; // do not put phone numbers in email
+      if (!looksLikeEmail(v)) continue; // only add if it looks like email
+      seenEmails.add(v.toLowerCase());
+      emails.push({ label: label || '* Other', value: v });
     }
   }
-  
-  // Parse phones
+
+  // Parse phones (deduplicate by normalized form; " ::: " can appear in one cell)
   const phones: LabeledField[] = [];
+  const seenPhones = new Set<string>();
   for (let i = 1; i <= 3; i++) {
-    const label = getValue(`Phone ${i} - Label`, 23 + (i - 1) * 2);
-    const value = getValue(`Phone ${i} - Value`, 24 + (i - 1) * 2);
-    if (label || value) {
-      phones.push({ label: label || '* Other', value });
-    }
+    const label = getValue(`Phone ${i} - Label`);
+    let value = getValue(`Phone ${i} - Value`);
+    if (!value && !label) continue;
+    const parts = value ? value.split(MULTI_VALUE_SEP).map(v => v.trim()).filter(Boolean) : [value].filter(Boolean) as string[];
+    const usedLabel = label || '* Other';
+    parts.forEach((p, idx) => {
+      const norm = p.replace(/\D/g, '');
+      if (norm.length < 7 || seenPhones.has(norm)) return;
+      seenPhones.add(norm);
+      phones.push({ label: idx === 0 ? usedLabel : '* Other', value: p });
+    });
   }
-  
-  // Parse address 1
+
+  // Parse address 1 (by header name only)
   const addresses: ContactAddress[] = [];
-  const addressLabel = getValue('Address 1 - Label', 29);
-  const addressFormatted = getValue('Address 1 - Formatted', 30);
-  const addressStreet = getValue('Address 1 - Street', 31);
-  const addressCity = getValue('Address 1 - City', 32);
-  const addressPOBox = getValue('Address 1 - PO Box', 33);
-  const addressRegion = getValue('Address 1 - Region', 34);
-  const addressPostalCode = getValue('Address 1 - Postal Code', 35);
-  const addressCountry = getValue('Address 1 - Country', 36);
-  const addressExtended = getValue('Address 1 - Extended Address', 37);
+  const addressLabel = getValue('Address 1 - Label');
+  const addressFormatted = getValue('Address 1 - Formatted');
+  const addressStreet = getValue('Address 1 - Street');
+  const addressCity = getValue('Address 1 - City');
+  const addressPOBox = getValue('Address 1 - PO Box');
+  const addressRegion = getValue('Address 1 - Region');
+  const addressPostalCode = getValue('Address 1 - Postal Code');
+  const addressCountry = getValue('Address 1 - Country');
+  const addressExtended = getValue('Address 1 - Extended Address');
   
   if (addressLabel || addressStreet || addressCity || addressFormatted) {
     addresses.push({
@@ -309,49 +358,47 @@ export function googleCSVToContact(row: string[], headerMap?: Map<string, number
     });
   }
   
-  // Parse relationships
+  // Parse relationships (Relation N - Label = category e.g. "Business/ Finance", Value = e.g. "Accountant")
   const relationships: LabeledField[] = [];
   for (let i = 1; i <= 3; i++) {
-    const label = getValue(`Relation ${i} - Label`, 38 + (i - 1) * 2);
-    const value = getValue(`Relation ${i} - Value`, 39 + (i - 1) * 2);
+    const label = getValue(`Relation ${i} - Label`);
+    const value = getValue(`Relation ${i} - Value`);
     if (label || value) {
       relationships.push({ label: label || '* Other', value });
     }
   }
-  
-  // Parse websites
+
+  // Parse websites (" ::: " possible; take first per slot)
   const websites: LabeledField[] = [];
   for (let i = 1; i <= 2; i++) {
-    const label = getValue(`Website ${i} - Label`, 44 + (i - 1) * 2);
-    const value = getValue(`Website ${i} - Value`, 45 + (i - 1) * 2);
-    if (label || value) {
-      websites.push({ label: label || '* Other', value });
-    }
+    const label = getValue(`Website ${i} - Label`);
+    const value = getValue(`Website ${i} - Value`);
+    const first = value ? value.split(MULTI_VALUE_SEP).map(v => v.trim()).filter(Boolean)[0] ?? '' : '';
+    if (!first && !label) continue;
+    websites.push({ label: label || '* Other', value: first || '' });
   }
-  
+
   // Parse events
   const events: ContactEvent[] = [];
   for (let i = 1; i <= 2; i++) {
-    const label = getValue(`Event ${i} - Label`, 48 + (i - 1) * 2);
-    const value = getValue(`Event ${i} - Value`, 49 + (i - 1) * 2);
-    if (label || value) {
-      let eventValue: Date | string = value;
-      try {
-        const dateValue = new Date(value);
-        if (!isNaN(dateValue.getTime())) {
-          eventValue = dateValue;
-        }
-      } catch {
-        // Keep as string
-      }
-      events.push({ label: label || '* Other', value: eventValue });
+    const label = getValue(`Event ${i} - Label`);
+    const value = getValue(`Event ${i} - Value`);
+    const first = value ? value.split(MULTI_VALUE_SEP).map(v => v.trim()).filter(Boolean)[0] ?? '' : '';
+    if (!first && !label) continue;
+    let eventValue: Date | string = first;
+    try {
+      const d = new Date(first);
+      if (!isNaN(d.getTime())) eventValue = d;
+    } catch {
+      // keep string
     }
+    events.push({ label: label || '* Other', value: eventValue });
   }
-  
+
   // Parse custom fields
   const customFields: LabeledField[] = [];
-  const customLabel = getValue('Custom Field 1 - Label', 52);
-  const customValue = getValue('Custom Field 1 - Value', 53);
+  const customLabel = getValue('Custom Field 1 - Label');
+  const customValue = getValue('Custom Field 1 - Value');
   if (customLabel || customValue) {
     customFields.push({ label: customLabel || '* Other', value: customValue });
   }
@@ -360,22 +407,22 @@ export function googleCSVToContact(row: string[], headerMap?: Map<string, number
   
   return {
     id: contactId || `contact-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    firstName: getValue('First Name', 0) || 'Unknown',
-    middleName: getValue('Middle Name', 1) || undefined,
-    lastName: getValue('Last Name', 2) || '',
-    phoneticFirstName: getValue('Phonetic First Name', 3) || undefined,
-    phoneticMiddleName: getValue('Phonetic Middle Name', 4) || undefined,
-    phoneticLastName: getValue('Phonetic Last Name', 5) || undefined,
-    namePrefix: getValue('Name Prefix', 6) || undefined,
-    nameSuffix: getValue('Name Suffix', 7) || undefined,
-    nickname: getValue('Nickname', 8) || undefined,
-    fileAs: getValue('File As', 9) || undefined,
-    organizationName: getValue('Organization Name', 10) || undefined,
-    organizationTitle: getValue('Organization Title', 11) || undefined,
-    organizationDepartment: getValue('Organization Department', 12) || undefined,
+    firstName: getValue('First Name') || 'Unknown',
+    middleName: getValue('Middle Name') || undefined,
+    lastName: getValue('Last Name') || '',
+    phoneticFirstName: getValue('Phonetic First Name') || undefined,
+    phoneticMiddleName: getValue('Phonetic Middle Name') || undefined,
+    phoneticLastName: getValue('Phonetic Last Name') || undefined,
+    namePrefix: getValue('Name Prefix') || undefined,
+    nameSuffix: getValue('Name Suffix') || undefined,
+    nickname: getValue('Nickname') || undefined,
+    fileAs: getValue('File As') || undefined,
+    organizationName: getValue('Organization Name') || undefined,
+    organizationTitle: getValue('Organization Title') || undefined,
+    organizationDepartment: getValue('Organization Department') || undefined,
     birthday,
-    notes: getValue('Notes', 14) || undefined,
-    photo: getValue('Photo', 15) || undefined,
+    notes: getValue('Notes') || undefined,
+    photo: getValue('Photo') || undefined,
     labels: labels.length > 0 ? labels : undefined,
     emails: emails.length > 0 ? emails : undefined,
     phones: phones.length > 0 ? phones : undefined,
@@ -402,69 +449,32 @@ export function contactsToGoogleCSV(contacts: Contact[]): string {
 }
 
 /**
- * Parse CSV rows properly handling multi-line quoted values
- */
-function parseCSVRows(csvContent: string): string[][] {
-  const rows: string[][] = [];
-  let currentRow: string[] = [];
-  let currentField = '';
-  let inQuotes = false;
-  
-  for (let i = 0; i < csvContent.length; i++) {
-    const char = csvContent[i];
-    const nextChar = csvContent[i + 1];
-    
-    if (char === '"') {
-      if (inQuotes && nextChar === '"') {
-        // Escaped quote
-        currentField += '"';
-        i++; // Skip next quote
-      } else {
-        // Toggle quote state
-        inQuotes = !inQuotes;
-      }
-    } else if (char === ',' && !inQuotes) {
-      // End of field
-      currentRow.push(currentField);
-      currentField = '';
-    } else if ((char === '\n' || char === '\r') && !inQuotes) {
-      // End of row (only if not in quotes)
-      if (currentField || currentRow.length > 0) {
-        currentRow.push(currentField);
-        rows.push(currentRow);
-        currentRow = [];
-        currentField = '';
-      }
-      // Skip \r\n combination
-      if (char === '\r' && nextChar === '\n') {
-        i++;
-      }
-    } else {
-      currentField += char;
-    }
-  }
-  
-  // Add last field and row if any
-  if (currentField || currentRow.length > 0) {
-    currentRow.push(currentField);
-    rows.push(currentRow);
-  }
-  
-  return rows;
-}
-
-/**
- * Create header index mapping
+ * Build header name -> column index map.
+ * Uses trimmed header names; also stores lowercase for case-insensitive lookup.
+ * No fallback indices - we only read by header name so column order is reliable.
  */
 function createHeaderMap(headers: string[]): Map<string, number> {
   const map = new Map<string, number>();
   headers.forEach((header, index) => {
-    const normalizedHeader = header.trim();
-    if (normalizedHeader) {
-      map.set(normalizedHeader, index);
+    const trimmed = header.trim();
+    if (trimmed) {
+      map.set(trimmed, index);
+      const lower = trimmed.toLowerCase();
+      if (lower !== trimmed) map.set(lower, index);
     }
   });
   return map;
+}
+
+/** Return true if string looks like a phone number (not an email). */
+function looksLikePhone(value: string): boolean {
+  const digits = value.replace(/\D/g, '');
+  return digits.length >= 7 && digits.length <= 15 && /^[\d\s\-\(\)\+\.]+$/.test(value.trim());
+}
+
+/** Return true if string looks like an email (not a phone). */
+function looksLikeEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
 /**

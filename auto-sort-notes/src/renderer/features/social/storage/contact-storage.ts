@@ -211,5 +211,14 @@ export const contactStorage = {
       return { ok: false, error: e instanceof Error ? e : new Error(String(e)) };
     }
   },
+
+  async deleteAllContacts(): Promise<Result<void, Error>> {
+    try {
+      saveContactsToLocalStorage([]);
+      return { ok: true, value: undefined };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e : new Error(String(e)) };
+    }
+  },
 };
 
