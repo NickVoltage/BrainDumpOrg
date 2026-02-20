@@ -30,11 +30,57 @@
 // - Comment 203 (TodoItem.tsx - individual todo item component)
 // - Comment 205 (useTodoList.ts - hook used by this component)
 
+import { useState } from 'react';
 import { MenuBar } from '../../../shared/components/MenuBar';
 import { Toolbar } from '../../../shared/components/Toolbar';
+import { TodoItem } from './TodoItem';
+import { TodoEditor } from './TodoEditor';
+import { useTodoList } from '../hooks/useTodoList';
+import { useTodo } from '../hooks/useTodo';
+import type { TodoItem as TodoItemType, TodoFilter, TodoSort, TodoSortField, TodoSortOrder } from '../types';
 import { Plus, Filter, ArrowUpDown, Search, Settings } from 'lucide-react';
 
 export const TodoList = () => {
+  const [showEditor, setShowEditor] = useState(false);
+  const [editingTodo, setEditingTodo] = useState<TodoItemType | undefined>(undefined);
+  const [filter, setFilter] = useState<TodoFilter>({ status: 'all' });
+  const [sort, setSort] = useState<TodoSort>({ field: 'dueDate', order: 'asc' });
+  const [showCompleted, setShowCompleted] = useState(true);
+
+  const { todos, loading, error, refresh } = useTodoList(
+    showCompleted ? filter : { ...filter, status: 'incomplete' },
+    sort
+  );
+  const { deleteTodo, toggleComplete } = useTodo();
+
+  const handleNewTodo = () => {
+    setEditingTodo(undefined);
+    setShowEditor(true);
+  };
+
+  const handleEditTodo = (todo: TodoItemType) => {
+    setEditingTodo(todo);
+    setShowEditor(true);
+  };
+
+  const handleDeleteTodo = async (id: string) => {
+    if (confirm('Are you sure you want to delete this todo?')) {
+      await deleteTodo(id);
+      refresh();
+    }
+  };
+
+  const handleToggleComplete = async (id: string) => {
+    await toggleComplete(id);
+    refresh();
+  };
+
+  const handleSaveTodo = () => {
+    setShowEditor(false);
+    setEditingTodo(undefined);
+    refresh();
+  };
+
   // Comment 1280: Todo List Menu Bar - File Menu
   // File menu dropdown with todo operations
   // - New Todo: Creates new todo item (Comment 1281)
@@ -134,10 +180,7 @@ export const TodoList = () => {
           id: 'new-todo',
           label: 'New Todo...',
           shortcut: 'Ctrl+N',
-          onClick: () => {
-            // TODO: Implement new todo (Comment 1281)
-            console.log('New Todo - placeholder');
-          },
+          onClick: handleNewTodo,
         },
         { id: 'separator-1', separator: true },
         {
@@ -167,18 +210,26 @@ export const TodoList = () => {
           label: 'Edit Todo...',
           shortcut: 'Ctrl+E',
           onClick: () => {
-            // TODO: Implement edit todo (Comment 1285)
-            console.log('Edit Todo - placeholder');
+            // Comment 1285: Edit Todo - Opens editor for selected todo
+            // Note: Requires todo selection - will be implemented with selection state
+            if (editingTodo) {
+              handleEditTodo(editingTodo);
+            }
           },
+          disabled: !editingTodo,
         },
         {
           id: 'delete-todo',
           label: 'Delete Todo',
           shortcut: 'Delete',
           onClick: () => {
-            // TODO: Implement delete todo (Comment 1286)
-            console.log('Delete Todo - placeholder');
+            // Comment 1286: Delete Todo - Deletes selected todo
+            // Note: Requires todo selection - will be implemented with selection state
+            if (editingTodo) {
+              handleDeleteTodo(editingTodo.id);
+            }
           },
+          disabled: !editingTodo,
         },
         { id: 'separator-1', separator: true },
         {
@@ -186,17 +237,25 @@ export const TodoList = () => {
           label: 'Mark Complete',
           shortcut: 'Ctrl+Enter',
           onClick: () => {
-            // TODO: Implement mark complete (Comment 1287)
-            console.log('Mark Complete - placeholder');
+            // Comment 1287: Mark Complete - Marks selected todos as completed
+            // Note: Requires todo selection - will be implemented with selection state
+            if (editingTodo) {
+              handleToggleComplete(editingTodo.id);
+            }
           },
+          disabled: !editingTodo,
         },
         {
           id: 'mark-incomplete',
           label: 'Mark Incomplete',
           onClick: () => {
-            // TODO: Implement mark incomplete (Comment 1288)
-            console.log('Mark Incomplete - placeholder');
+            // Comment 1288: Mark Incomplete - Marks selected todos as incomplete
+            // Note: Requires todo selection - will be implemented with selection state
+            if (editingTodo) {
+              handleToggleComplete(editingTodo.id);
+            }
           },
+          disabled: !editingTodo,
         },
       ],
     },
@@ -207,10 +266,7 @@ export const TodoList = () => {
         {
           id: 'show-completed',
           label: 'Show Completed',
-          onClick: () => {
-            // TODO: Implement show completed (Comment 1290)
-            console.log('Show Completed - placeholder');
-          },
+          onClick: () => setShowCompleted(!showCompleted),
         },
         {
           id: 'show-incomplete',
@@ -292,11 +348,8 @@ export const TodoList = () => {
       id: 'new-todo',
       label: 'New Todo',
       icon: Plus,
-      variant: 'primary' as const,
-      onClick: () => {
-        // TODO: Implement new todo (Comment 1281)
-        console.log('New Todo clicked - placeholder');
-      },
+      variant: 'default' as const,
+      onClick: handleNewTodo,
     },
     {
       id: 'filter',
@@ -340,9 +393,138 @@ export const TodoList = () => {
     <div className="flex flex-col h-full">
       <MenuBar items={menuItems} />
       <Toolbar items={toolbarItems} />
-      <div className="flex-1 p-6 overflow-auto">
-        {/* Todo list content will go here */}
+      <div className="flex-1 p-6 overflow-auto" style={{ paddingRight: '16px' }}>
+        {/* Filter and Sort Controls */}
+        <div className="mb-4 flex items-center gap-4 flex-wrap">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={showCompleted}
+              onChange={(e) => setShowCompleted(e.target.checked)}
+              className="w-4 h-4"
+            />
+            <span style={{ color: 'var(--color-foreground)' }}>Show Completed</span>
+          </label>
+          <select
+            value={filter.status || 'all'}
+            onChange={(e) => setFilter({ ...filter, status: e.target.value as TodoFilter['status'] })}
+            className="px-3 py-1.5 rounded border text-sm"
+            style={{
+              backgroundColor: 'var(--color-background)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-foreground)',
+            }}
+          >
+            <option value="all">All Status</option>
+            <option value="incomplete">Incomplete</option>
+            <option value="completed">Completed</option>
+          </select>
+          <select
+            value={filter.priority || 'all'}
+            onChange={(e) => setFilter({ ...filter, priority: e.target.value as TodoFilter['priority'] })}
+            className="px-3 py-1.5 rounded border text-sm"
+            style={{
+              backgroundColor: 'var(--color-background)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-foreground)',
+            }}
+          >
+            <option value="all">All Priorities</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+          <select
+            value={`${sort.field}-${sort.order}`}
+            onChange={(e) => {
+              const [field, order] = e.target.value.split('-');
+              setSort({ field: field as TodoSortField, order: order as TodoSortOrder });
+            }}
+            className="px-3 py-1.5 rounded border text-sm"
+            style={{
+              backgroundColor: 'var(--color-background)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-foreground)',
+            }}
+          >
+            <option value="dueDate-asc">Due Date (Ascending)</option>
+            <option value="dueDate-desc">Due Date (Descending)</option>
+            <option value="doDate-asc">Do Date (Ascending)</option>
+            <option value="doDate-desc">Do Date (Descending)</option>
+            <option value="priority-desc">Priority (High to Low)</option>
+            <option value="priority-asc">Priority (Low to High)</option>
+            <option value="title-asc">Title (A-Z)</option>
+            <option value="title-desc">Title (Z-A)</option>
+            <option value="createdAt-desc">Created (Newest)</option>
+            <option value="createdAt-asc">Created (Oldest)</option>
+          </select>
+        </div>
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-8" style={{ color: 'var(--color-muted-foreground)' }}>
+            Loading todos...
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="text-center py-8 text-red-600 dark:text-red-400">
+            Error: {error.message}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && !error && todos.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-lg mb-2" style={{ color: 'var(--color-muted-foreground)' }}>
+              No todos found
+            </p>
+            <p className="text-sm mb-4" style={{ color: 'var(--color-muted-foreground)' }}>
+              Create your first todo to get started
+            </p>
+            <button
+              onClick={handleNewTodo}
+              className="px-4 py-2 rounded transition-colors"
+              style={{
+                backgroundColor: 'var(--color-primary)',
+                color: 'var(--color-primary-foreground)',
+                border: 'none',
+              }}
+            >
+              New Todo
+            </button>
+          </div>
+        )}
+
+        {/* Todo List */}
+        {!loading && !error && todos.length > 0 && (
+          <div className="space-y-2">
+            {todos.map(todo => (
+              <TodoItem
+                key={todo.id}
+                todo={todo}
+                onEdit={handleEditTodo}
+                onDelete={handleDeleteTodo}
+                onToggleComplete={handleToggleComplete}
+              />
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Todo Editor Modal */}
+      {showEditor && (
+        <TodoEditor
+          todo={editingTodo}
+          onSave={handleSaveTodo}
+          onClose={() => {
+            setShowEditor(false);
+            setEditingTodo(undefined);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -69,11 +69,47 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Reset fieldset default styles - CRITICAL for FloatingLabelInput */
+  /* Browsers default to border: 2px groove which creates a 3D white border effect */
+  /* Using direct color values to ensure they apply */
+  fieldset {
+    border: 1px solid #e5e7eb !important;
+    border-style: solid !important;
+    border-width: 1px !important;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 /* Component Styles */
 @layer components {
-  /* Component styles can be added here */
+  /* FloatingLabelInput fieldset border color override - MUST use !important */
+  /* Override browser default 2px groove border that creates white 3D effect */
+  /* Using direct hex color #396cd8 to eliminate CSS variable resolution issues */
+  .floating-label-fieldset.fieldset-active,
+  .floating-label-fieldset.fieldset-focused {
+    border: 1px solid #396cd8 !important;
+    border-style: solid !important;
+    border-width: 1px !important;
+    border-color: #396cd8 !important;
+    border-top-color: #396cd8 !important;
+    border-right-color: #396cd8 !important;
+    border-bottom-color: #396cd8 !important;
+    border-left-color: #396cd8 !important;
+  }
+  
+  .floating-label-fieldset {
+    border: 1px solid #e5e7eb !important;
+    border-style: solid !important;
+    border-width: 1px !important;
+  }
+  
+  /* Ensure legend doesn't have any border */
+  .floating-label-fieldset legend {
+    border: none !important;
+    background-color: var(--color-background);
+  }
 }
 
 /* Utility Styles */

@@ -34,7 +34,7 @@
 // - Comment 1003 (MainLayout.tsx - main layout)
 // - Comment 1005 (NavigationContext.tsx - navigation context)
 
-import { LayoutDashboard, FileText, Calendar, CheckSquare, Clock, Tag } from 'lucide-react';
+import { LayoutDashboard, FileText, Calendar, CheckSquare, Clock, Tag, User } from 'lucide-react';
 import { useNavigation, Tab } from '../../contexts/NavigationContext';
 import { clsx } from 'clsx';
 
@@ -44,6 +44,7 @@ const tabs: { id: Tab; label: string; icon: React.ComponentType<{ className?: st
   { id: 'calendar', label: 'Calendar', icon: Calendar },
   { id: 'todos', label: 'Do/Due', icon: CheckSquare },
   { id: 'alarms', label: 'Alarm/Timer', icon: Clock },
+  { id: 'social', label: 'Social Hub', icon: User },
   { id: 'metadata', label: 'Metadata', icon: Tag },
 ];
 

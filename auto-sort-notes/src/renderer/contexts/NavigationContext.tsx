@@ -39,7 +39,7 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-export type Tab = 'dashboard' | 'docs' | 'calendar' | 'todos' | 'alarms' | 'metadata';
+export type Tab = 'dashboard' | 'docs' | 'calendar' | 'todos' | 'alarms' | 'metadata' | 'social';
 
 interface NavigationContextType {
   currentTab: Tab;

@@ -39,3 +39,10 @@ yarn-debug.log*
 
 # Tauri specific
 src-tauri/target/
+
+# Contact data files (personal information - should not be committed)
+*.csv
+*.vcf
+contacts*.csv
+*contacts*.csv
+*contacts*.vcf

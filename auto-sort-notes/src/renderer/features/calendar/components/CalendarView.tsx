@@ -445,13 +445,20 @@ export const CalendarView = () => {
           <div className="flex items-center">
             <button
               onClick={handlePreviousMonth}
-              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-lg leading-none flex items-center bg-transparent border-none outline-none"
+              className="transition-colors cursor-pointer text-lg leading-none flex items-center bg-transparent border-none outline-none"
               style={{ 
                 padding: '4px 24px 4px 0',
                 margin: 0,
                 appearance: 'none',
                 WebkitAppearance: 'none',
-                MozAppearance: 'none'
+                MozAppearance: 'none',
+                color: 'var(--color-foreground)',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.opacity = '0.7';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.opacity = '1';
               }}
               aria-label="Previous month"
             >
@@ -552,13 +559,20 @@ export const CalendarView = () => {
             </div>
             <button
               onClick={handleNextMonth}
-              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-lg leading-none flex items-center bg-transparent border-none outline-none"
+              className="transition-colors cursor-pointer text-lg leading-none flex items-center bg-transparent border-none outline-none"
               style={{ 
                 padding: '4px 0 4px 24px',
                 margin: 0,
                 appearance: 'none',
                 WebkitAppearance: 'none',
-                MozAppearance: 'none'
+                MozAppearance: 'none',
+                color: 'var(--color-foreground)',
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.opacity = '0.7';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.opacity = '1';
               }}
               aria-label="Next month"
             >

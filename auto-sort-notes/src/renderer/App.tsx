@@ -44,6 +44,7 @@ import { NoteEditor } from './features/notes/components/NoteEditor';
 import { CalendarView } from './features/calendar/components/CalendarView';
 import { TodoList } from './features/todos/components/TodoList';
 import { AlarmTimerTab } from './features/alarms/components/AlarmTimerTab';
+import { SocialHub } from './features/social/components/SocialHub';
 import { MetadataManager } from './features/metadata/components/MetadataManager';
 
 // Comment 1006: App Router Setup - Main Application Component
@@ -93,6 +94,8 @@ function AppContent() {
       return <TodoList />;
     case 'alarms':
       return <AlarmTimerTab />;
+    case 'social':
+      return <SocialHub />;
     case 'metadata':
       return <MetadataManager />;
     default:
