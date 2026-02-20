@@ -230,13 +230,24 @@ export function contactToGoogleCSV(contact: Contact): string {
 /**
  * Parse Google Contacts CSV row to Contact
  */
-export function googleCSVToContact(row: string[], contactId?: string): Contact {
-  // Helper to get value by index
-  const getValue = (index: number) => unescapeCSVValue(row[index] || '');
+export function googleCSVToContact(row: string[], headerMap?: Map<string, number>, contactId?: string): Contact {
+  // Helper to get value by header name or index (for backward compatibility)
+  const getValue = (headerName: string, fallbackIndex?: number) => {
+    if (headerMap) {
+      const index = headerMap.get(headerName);
+      if (index !== undefined && row[index] !== undefined) {
+        return unescapeCSVValue(row[index]);
+      }
+    }
+    if (fallbackIndex !== undefined) {
+      return unescapeCSVValue(row[fallbackIndex] || '');
+    }
+    return '';
+  };
   
   // Parse birthday
   let birthday: Date | string | undefined;
-  const birthdayStr = getValue(13);
+  const birthdayStr = getValue('Birthday', 13);
   if (birthdayStr) {
     try {
       birthday = new Date(birthdayStr);
@@ -249,14 +260,14 @@ export function googleCSVToContact(row: string[], contactId?: string): Contact {
   }
   
   // Parse labels (split by " ::: ")
-  const labelsStr = getValue(16);
+  const labelsStr = getValue('Labels', 16);
   const labels = labelsStr ? labelsStr.split(' ::: ').filter(l => l.trim()) : [];
   
   // Parse emails
   const emails: LabeledField[] = [];
-  for (let i = 0; i < 3; i++) {
-    const label = getValue(17 + i * 2);
-    const value = getValue(18 + i * 2);
+  for (let i = 1; i <= 3; i++) {
+    const label = getValue(`E-mail ${i} - Label`, 17 + (i - 1) * 2);
+    const value = getValue(`E-mail ${i} - Value`, 18 + (i - 1) * 2);
     if (label || value) {
       emails.push({ label: label || '* Other', value });
     }
@@ -264,9 +275,9 @@ export function googleCSVToContact(row: string[], contactId?: string): Contact {
   
   // Parse phones
   const phones: LabeledField[] = [];
-  for (let i = 0; i < 3; i++) {
-    const label = getValue(23 + i * 2);
-    const value = getValue(24 + i * 2);
+  for (let i = 1; i <= 3; i++) {
+    const label = getValue(`Phone ${i} - Label`, 23 + (i - 1) * 2);
+    const value = getValue(`Phone ${i} - Value`, 24 + (i - 1) * 2);
     if (label || value) {
       phones.push({ label: label || '* Other', value });
     }
@@ -274,15 +285,15 @@ export function googleCSVToContact(row: string[], contactId?: string): Contact {
   
   // Parse address 1
   const addresses: ContactAddress[] = [];
-  const addressLabel = getValue(29);
-  const addressFormatted = getValue(30);
-  const addressStreet = getValue(31);
-  const addressCity = getValue(32);
-  const addressPOBox = getValue(33);
-  const addressRegion = getValue(34);
-  const addressPostalCode = getValue(35);
-  const addressCountry = getValue(36);
-  const addressExtended = getValue(37);
+  const addressLabel = getValue('Address 1 - Label', 29);
+  const addressFormatted = getValue('Address 1 - Formatted', 30);
+  const addressStreet = getValue('Address 1 - Street', 31);
+  const addressCity = getValue('Address 1 - City', 32);
+  const addressPOBox = getValue('Address 1 - PO Box', 33);
+  const addressRegion = getValue('Address 1 - Region', 34);
+  const addressPostalCode = getValue('Address 1 - Postal Code', 35);
+  const addressCountry = getValue('Address 1 - Country', 36);
+  const addressExtended = getValue('Address 1 - Extended Address', 37);
   
   if (addressLabel || addressStreet || addressCity || addressFormatted) {
     addresses.push({
@@ -300,9 +311,9 @@ export function googleCSVToContact(row: string[], contactId?: string): Contact {
   
   // Parse relationships
   const relationships: LabeledField[] = [];
-  for (let i = 0; i < 3; i++) {
-    const label = getValue(38 + i * 2);
-    const value = getValue(39 + i * 2);
+  for (let i = 1; i <= 3; i++) {
+    const label = getValue(`Relation ${i} - Label`, 38 + (i - 1) * 2);
+    const value = getValue(`Relation ${i} - Value`, 39 + (i - 1) * 2);
     if (label || value) {
       relationships.push({ label: label || '* Other', value });
     }
@@ -310,9 +321,9 @@ export function googleCSVToContact(row: string[], contactId?: string): Contact {
   
   // Parse websites
   const websites: LabeledField[] = [];
-  for (let i = 0; i < 2; i++) {
-    const label = getValue(44 + i * 2);
-    const value = getValue(45 + i * 2);
+  for (let i = 1; i <= 2; i++) {
+    const label = getValue(`Website ${i} - Label`, 44 + (i - 1) * 2);
+    const value = getValue(`Website ${i} - Value`, 45 + (i - 1) * 2);
     if (label || value) {
       websites.push({ label: label || '* Other', value });
     }
@@ -320,9 +331,9 @@ export function googleCSVToContact(row: string[], contactId?: string): Contact {
   
   // Parse events
   const events: ContactEvent[] = [];
-  for (let i = 0; i < 2; i++) {
-    const label = getValue(48 + i * 2);
-    const value = getValue(49 + i * 2);
+  for (let i = 1; i <= 2; i++) {
+    const label = getValue(`Event ${i} - Label`, 48 + (i - 1) * 2);
+    const value = getValue(`Event ${i} - Value`, 49 + (i - 1) * 2);
     if (label || value) {
       let eventValue: Date | string = value;
       try {
@@ -339,8 +350,8 @@ export function googleCSVToContact(row: string[], contactId?: string): Contact {
   
   // Parse custom fields
   const customFields: LabeledField[] = [];
-  const customLabel = getValue(52);
-  const customValue = getValue(53);
+  const customLabel = getValue('Custom Field 1 - Label', 52);
+  const customValue = getValue('Custom Field 1 - Value', 53);
   if (customLabel || customValue) {
     customFields.push({ label: customLabel || '* Other', value: customValue });
   }
@@ -349,22 +360,22 @@ export function googleCSVToContact(row: string[], contactId?: string): Contact {
   
   return {
     id: contactId || `contact-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    firstName: getValue(0) || 'Unknown',
-    middleName: getValue(1) || undefined,
-    lastName: getValue(2) || '',
-    phoneticFirstName: getValue(3) || undefined,
-    phoneticMiddleName: getValue(4) || undefined,
-    phoneticLastName: getValue(5) || undefined,
-    namePrefix: getValue(6) || undefined,
-    nameSuffix: getValue(7) || undefined,
-    nickname: getValue(8) || undefined,
-    fileAs: getValue(9) || undefined,
-    organizationName: getValue(10) || undefined,
-    organizationTitle: getValue(11) || undefined,
-    organizationDepartment: getValue(12) || undefined,
+    firstName: getValue('First Name', 0) || 'Unknown',
+    middleName: getValue('Middle Name', 1) || undefined,
+    lastName: getValue('Last Name', 2) || '',
+    phoneticFirstName: getValue('Phonetic First Name', 3) || undefined,
+    phoneticMiddleName: getValue('Phonetic Middle Name', 4) || undefined,
+    phoneticLastName: getValue('Phonetic Last Name', 5) || undefined,
+    namePrefix: getValue('Name Prefix', 6) || undefined,
+    nameSuffix: getValue('Name Suffix', 7) || undefined,
+    nickname: getValue('Nickname', 8) || undefined,
+    fileAs: getValue('File As', 9) || undefined,
+    organizationName: getValue('Organization Name', 10) || undefined,
+    organizationTitle: getValue('Organization Title', 11) || undefined,
+    organizationDepartment: getValue('Organization Department', 12) || undefined,
     birthday,
-    notes: getValue(14) || undefined,
-    photo: getValue(15) || undefined,
+    notes: getValue('Notes', 14) || undefined,
+    photo: getValue('Photo', 15) || undefined,
     labels: labels.length > 0 ? labels : undefined,
     emails: emails.length > 0 ? emails : undefined,
     phones: phones.length > 0 ? phones : undefined,
@@ -391,22 +402,89 @@ export function contactsToGoogleCSV(contacts: Contact[]): string {
 }
 
 /**
+ * Parse CSV rows properly handling multi-line quoted values
+ */
+function parseCSVRows(csvContent: string): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < csvContent.length; i++) {
+    const char = csvContent[i];
+    const nextChar = csvContent[i + 1];
+    
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        // Escaped quote
+        currentField += '"';
+        i++; // Skip next quote
+      } else {
+        // Toggle quote state
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      // End of field
+      currentRow.push(currentField);
+      currentField = '';
+    } else if ((char === '\n' || char === '\r') && !inQuotes) {
+      // End of row (only if not in quotes)
+      if (currentField || currentRow.length > 0) {
+        currentRow.push(currentField);
+        rows.push(currentRow);
+        currentRow = [];
+        currentField = '';
+      }
+      // Skip \r\n combination
+      if (char === '\r' && nextChar === '\n') {
+        i++;
+      }
+    } else {
+      currentField += char;
+    }
+  }
+  
+  // Add last field and row if any
+  if (currentField || currentRow.length > 0) {
+    currentRow.push(currentField);
+    rows.push(currentRow);
+  }
+  
+  return rows;
+}
+
+/**
+ * Create header index mapping
+ */
+function createHeaderMap(headers: string[]): Map<string, number> {
+  const map = new Map<string, number>();
+  headers.forEach((header, index) => {
+    const normalizedHeader = header.trim();
+    if (normalizedHeader) {
+      map.set(normalizedHeader, index);
+    }
+  });
+  return map;
+}
+
+/**
  * Parse Google Contacts CSV file content
  */
 export function parseGoogleCSV(csvContent: string): Contact[] {
-  const lines = csvContent.split(/\r?\n/).filter(line => line.trim());
-  if (lines.length === 0) return [];
+  const rows = parseCSVRows(csvContent);
+  if (rows.length === 0) return [];
   
-  // First line is headers - verify it matches expected format
-  const headers = parseCSVLine(lines[0]);
+  // First row is headers - create mapping
+  const headers = rows[0];
+  const headerMap = createHeaderMap(headers);
   
   // Parse data rows
   const contacts: Contact[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const row = parseCSVLine(lines[i]);
-    if (row.length > 0 && row[0]) { // At least first name should exist
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (row.length > 0 && row[0]?.trim()) { // At least first name should exist
       try {
-        contacts.push(googleCSVToContact(row));
+        contacts.push(googleCSVToContact(row, headerMap));
       } catch (error) {
         console.error(`Error parsing contact row ${i}:`, error);
         // Continue with next contact
